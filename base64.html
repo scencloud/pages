@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公益 Base64 转换工具</title>
+    <style>
+        /* ================================================================
+           加载动画样式
+           ================================================================ */
+        #loader-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        #loader-wrapper.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-box {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .star-icon {
+            font-size: 72px;
+            display: block;
+            margin-bottom: 10px;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.15);
+                opacity: 0.8;
+            }
+        }
+
+        .loader-domain {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: 4px;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+        }
+        .loader-sub {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-bottom: 24px;
+            letter-spacing: 2px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: white;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+        }
+        .progress-text {
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+            opacity: 0.8;
+            letter-spacing: 1px;
+        }
+
+        /* ================================================================
+           主页面样式
+           ================================================================ */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            max-width: 880px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-top: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 26px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 22px;
+            border: none;
+            background: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #a0aec0;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: #ebf4ff;
+        }
+        .tab:hover {
+            color: #667eea;
+        }
+        .panel {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        .panel.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s;
+            min-height: 110px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin: 14px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            flex: 1;
+            min-width: 72px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-encode {
+            background: #667eea;
+        }
+        .btn-encode:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+        .btn-decode {
+            background: #48bb78;
+        }
+        .btn-decode:hover:not(:disabled) {
+            background: #38a169;
+        }
+        .btn-clear {
+            background: #fc8181;
+        }
+        .btn-clear:hover:not(:disabled) {
+            background: #f56565;
+        }
+        .btn-copy {
+            background: #ed8936;
+        }
+        .btn-copy:hover:not(:disabled) {
+            background: #dd6b20;
+        }
+        .btn-download {
+            background: #9f7aea;
+        }
+        .btn-download:hover:not(:disabled) {
+            background: #805ad5;
+        }
+        .btn-primary {
+            background: #667eea;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+        .btn-success {
+            background: #48bb78;
+        }
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+        }
+        .btn-danger {
+            background: #fc8181;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #f56565;
+        }
+        .btn-orange {
+            background: #ed8936;
+        }
+        .btn-orange:hover:not(:disabled) {
+            background: #dd6b20;
+        }
+        .btn-gray {
+            background: #a0aec0;
+        }
+        .btn-gray:hover:not(:disabled) {
+            background: #718096;
+        }
+
+        .result-box {
+            margin-top: 14px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 12px;
+            min-height: 70px;
+            word-break: break-all;
+            font-size: 14px;
+            font-family: monospace;
+            border: 2px dashed #e2e8f0;
+            position: relative;
+        }
+        .result-box .label {
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+            font-size: 12px;
+            color: #a0aec0;
+            margin-bottom: 6px;
+        }
+        .result-box .content {
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        .upload-area {
+            border: 3px dashed #e2e8f0;
+            border-radius: 16px;
+            padding: 32px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f7fafc;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #ebf4ff;
+        }
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #ebf4ff;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 6px;
+        }
+        .upload-text {
+            color: #4a5568;
+            font-size: 15px;
+        }
+        .upload-hint {
+            color: #a0aec0;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .preview-box {
+            margin-top: 16px;
+            text-align: center;
+            display: none;
+        }
+        .preview-box.show {
+            display: block;
+        }
+        .preview-box img {
+            max-width: 100%;
+            max-height: 340px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .preview-box .info {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .result-area {
+            margin-top: 14px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 12px;
+            min-height: 60px;
+            word-break: break-all;
+            font-size: 13px;
+            font-family: monospace;
+            border: 2px dashed #e2e8f0;
+            display: none;
+        }
+        .result-area.show {
+            display: block;
+        }
+        .result-area .label {
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+            font-size: 12px;
+            color: #a0aec0;
+            margin-bottom: 6px;
+        }
+        .result-area .content {
+            max-height: 260px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .decode-preview {
+            margin-top: 14px;
+            text-align: center;
+            display: none;
+        }
+        .decode-preview.show {
+            display: block;
+        }
+        .decode-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .decode-preview .info {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        /* 进度条（图片处理用） */
+        .progress-mini {
+            margin-top: 12px;
+            display: none;
+        }
+        .progress-mini.show {
+            display: block;
+        }
+        .progress-mini .track {
+            width: 100%;
+            height: 5px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-mini .track .bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 0.2s ease;
+        }
+        .progress-mini .text {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-top: 4px;
+            text-align: center;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 999;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .toast.success {
+            background: #48bb78;
+        }
+        .toast.error {
+            background: #fc8181;
+        }
+        .toast.info {
+            background: #667eea;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #a0aec0;
+            font-size: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 16px;
+        }
+        .badge {
+            display: inline-block;
+            background: #ebf4ff;
+            color: #667eea;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .mode-hint {
+            font-size: 13px;
+            color: #a0aec0;
+            margin: 6px 0 10px 0;
+            padding: 8px 14px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .mode-hint strong {
+            color: #4a5568;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+            .tab {
+                font-size: 13px;
+                padding: 8px 14px;
+            }
+            button {
+                font-size: 13px;
+                padding: 8px 12px;
+                min-width: 60px;
+            }
+            .star-icon {
+                font-size: 52px;
+            }
+            .loader-domain {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================================================================
+    加载动画
+    ================================================================ -->
+    <div id="loader-wrapper">
+        <div class="loader-box">
+            <span class="star-icon">⭐</span>
+            <div class="loader-domain">来自 comcn.cyou</div>
+            <div class="loader-sub">公益 Base64 转换工具</div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+    主页面
+    ================================================================ -->
+    <div class="container" id="mainContainer">
+
+        <h1>🔐 Base64 转换工具</h1>
+        <p class="subtitle">纯公益 · 免费 · 数据只在浏览器本地处理</p>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="text">📝 文字转换</button>
+            <button class="tab" data-tab="image">🖼️ 图片转换</button>
+        </div>
+
+        <!-- ===== 文字面板 ===== -->
+        <div class="panel active" id="panel-text">
+            <div class="mode-hint">
+                💡 <strong>文字编码</strong>：中文/英文/JSON 等任意文本 → Base64 字符串 &nbsp;|&nbsp;
+                <strong>文字解码</strong>：Base64 字符串 → 还原文本
+            </div>
+            <textarea id="textInput" placeholder="请输入要编码或解码的文本...&#10;例如: Hello 你好 或 SGVsbG8g5L2g5aW9"></textarea>
+            <div class="btn-group">
+                <button class="btn-encode" onclick="textEncode()">⬆ 编码</button>
+                <button class="btn-decode" onclick="textDecode()">⬇ 解码</button>
+                <button class="btn-clear" onclick="textClear()">🗑 清空</button>
+                <button class="btn-copy" onclick="textCopy()">📋 复制结果</button>
+            </div>
+            <div class="result-box" id="textResult">
+                <div class="label">📄 转换结果</div>
+                <div class="content" id="textResultContent">等待操作...</div>
+            </div>
+            <div class="stats">
+                <span id="textCharCount">字符数: 0</span>
+                <span>⌨️ Ctrl+Enter 编码 · Shift+Enter 解码</span>
+            </div>
+        </div>
+
+        <!-- ===== 图片面板 ===== -->
+        <div class="panel" id="panel-image">
+            <div class="mode-hint">
+                💡 <strong>图片编码</strong>：上传图片 → 生成 Base64 字符串 &nbsp;|&nbsp;
+                <strong>图片解码</strong>：粘贴 Base64 → 还原为图片
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                <button class="btn-primary" id="imgEncodeTab" onclick="switchImageTab('encode')" style="flex:0 1 auto; min-width:auto; padding:6px 18px; font-size:13px;">📤 编码</button>
+                <button class="btn-success" id="imgDecodeTab" onclick="switchImageTab('decode')" style="flex:0 1 auto; min-width:auto; padding:6px 18px; font-size:13px; background:#a0aec0;">📥 解码</button>
+            </div>
+
+            <!-- 图片编码 -->
+            <div id="imgEncodePanel">
+                <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击上传 或 拖拽图片到这里</div>
+                    <div class="upload-hint">支持 PNG / JPG / GIF / WebP / SVG / BMP</div>
+                    <input type="file" id="fileInput" accept="image/*" multiple>
+                </div>
+                <div class="preview-box" id="previewBox">
+                    <img id="previewImage" alt="预览">
+                    <div class="info" id="imageInfo"></div>
+                </div>
+
+                <!-- 图片编码进度条 -->
+                <div class="progress-mini" id="encodeProgress">
+                    <div class="track"><div class="bar" id="encodeProgressBar"></div></div>
+                    <div class="text" id="encodeProgressText">处理中 0%</div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-encode" id="encodeBtn" onclick="imageEncode()">🔄 转 Base64</button>
+                    <button class="btn-clear" onclick="imageEncodeClear()">🗑 清空</button>
+                </div>
+
+                <div class="result-area" id="imgEncodeResult">
+                    <div class="label">📄 Base64 结果</div>
+                    <div class="content" id="imgEncodeResultText"></div>
+                    <div class="btn-group" style="margin-top:10px;">
+                        <button class="btn-copy" onclick="imgEncodeCopy()">📋 复制</button>
+                        <button class="btn-download" onclick="imgEncodeDownload()">💾 下载 .txt</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图片解码 -->
+            <div id="imgDecodePanel" style="display:none;">
+                <textarea id="decodeInput" placeholder="粘贴 Base64 字符串...&#10;例如: data:image/png;base64,iVBORw0KGgo..."></textarea>
+
+                <!-- 图片解码进度条 -->
+                <div class="progress-mini" id="decodeProgress">
+                    <div class="track"><div class="bar" id="decodeProgressBar"></div></div>
+                    <div class="text" id="decodeProgressText">解码中 0%</div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-decode" id="decodeBtn" onclick="imageDecode()">🔄 还原图片</button>
+                    <button class="btn-clear" onclick="imageDecodeClear()">🗑 清空</button>
+                </div>
+
+                <div class="decode-preview" id="decodePreview">
+                    <img id="decodeImage" alt="还原的图片">
+                    <div class="info" id="decodeInfo"></div>
+                    <div class="btn-group" style="margin-top:10px;">
+                        <button class="btn-success" onclick="imageDecodeDownload()">💾 下载图片</button>
+                    </div>
+                </div>
+
+                <div class="result-area" id="imgDecodeResult">
+                    <div class="label">📄 识别信息</div>
+                    <div class="content" id="imgDecodeResultText"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            ⚡ 纯本地处理 · 数据不上传服务器 · 公益免费 ❤️
+            <br><span class="badge">文字 + 图片 全支持</span>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ================================================================
+        //  加载动画（3秒）
+        // ================================================================
+
+        (function startLoader() {
+            const wrapper = document.getElementById('loader-wrapper');
+            const bar = document.getElementById('progressBar');
+            const text = document.getElementById('progressText');
+            const container = document.getElementById('mainContainer');
+
+            let progress = 0;
+            const duration = 3000; // 3秒
+            const interval = 30; // 每30ms更新一次
+            const step = (interval / duration) * 100;
+
+            const timer = setInterval(() => {
+                progress += step;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(timer);
+                    // 隐藏加载动画
+                    wrapper.classList.add('hidden');
+                    container.classList.add('show');
+                }
+                bar.style.width = progress + '%';
+                text.textContent = Math.floor(progress) + '%';
+            }, interval);
+        })();
+
+        // ================================================================
+        //  工具函数
+        // ================================================================
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            setTimeout(() => t.classList.add('show'), 10);
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function utf8ToBase64(str) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(str);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function base64ToUtf8(base64) {
+            try {
+                if (!base64 || base64.trim() === '') return '';
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                const decoder = new TextDecoder('utf-8');
+                return decoder.decode(bytes);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // ================================================================
+        //  Tab 切换（主）
+        // ================================================================
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                const target = this.dataset.tab;
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                document.getElementById('panel-' + target).classList.add('active');
+            });
+        });
+
+        // ================================================================
+        //  图片子 Tab 切换
+        // ================================================================
+
+        function switchImageTab(mode) {
+            const encodeTab = document.getElementById('imgEncodeTab');
+            const decodeTab = document.getElementById('imgDecodeTab');
+            const encodePanel = document.getElementById('imgEncodePanel');
+            const decodePanel = document.getElementById('imgDecodePanel');
+
+            if (mode === 'encode') {
+                encodeTab.style.background = '#667eea';
+                decodeTab.style.background = '#a0aec0';
+                encodePanel.style.display = 'block';
+                decodePanel.style.display = 'none';
+            } else {
+                encodeTab.style.background = '#a0aec0';
+                decodeTab.style.background = '#48bb78';
+                encodePanel.style.display = 'none';
+                decodePanel.style.display = 'block';
+            }
+        }
+
+        // ================================================================
+        //  ★★★ 文字转换 ★★★
+        // ================================================================
+
+        const textInput = document.getElementById('textInput');
+        const textResultContent = document.getElementById('textResultContent');
+
+        function updateTextCharCount() {
+            document.getElementById('textCharCount').textContent = '字符数: ' + textInput.value.length;
+        }
+        textInput.addEventListener('input', updateTextCharCount);
+        updateTextCharCount();
+
+        function textEncode() {
+            const val = textInput.value;
+            if (!val) { showToast('请先输入要编码的内容', 'error'); return; }
+            try {
+                textResultContent.textContent = utf8ToBase64(val);
+                showToast('✅ 编码成功');
+            } catch (e) {
+                textResultContent.textContent = '❌ 编码失败: ' + e.message;
+                showToast('编码失败', 'error');
+            }
+        }
+
+        function textDecode() {
+            const val = textInput.value.trim();
+            if (!val) { showToast('请先输入要解码的 Base64', 'error'); return; }
+            const result = base64ToUtf8(val);
+            if (result === null) {
+                textResultContent.textContent = '❌ 解码失败: 无效的 Base64 格式';
+                showToast('解码失败', 'error');
+            } else if (result === '') {
+                textResultContent.textContent = '⚠️ 解码结果为空（可能是空字符串）';
+                showToast('解码结果为空', 'info');
+            } else {
+                textResultContent.textContent = result;
+                showToast('✅ 解码成功');
+            }
+        }
+
+        function textClear() {
+            textInput.value = '';
+            textResultContent.textContent = '等待操作...';
+            updateTextCharCount();
+            showToast('已清空', 'info');
+        }
+
+        function textCopy() {
+            const text = textResultContent.textContent;
+            if (!text || text === '等待操作...' || text.startsWith('❌') || text.startsWith('⚠️')) {
+                showToast('没有可复制的内容', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => showToast('✅ 已复制')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('✅ 已复制');
+            });
+        }
+
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault();
+                textEncode(); }
+            if (e.key === 'Enter' && e.shiftKey) { e.preventDefault();
+                textDecode(); }
+        });
+
+        // ================================================================
+        //  ★★★ 图片转换 ★★★
+        // ================================================================
+
+        let uploadedFiles = [];
+        let imgEncodeResultData = '';
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadedFiles = Array.from(e.target.files);
+                showImagePreview(uploadedFiles[0]);
+                showToast('已上传: ' + uploadedFiles[0].name, 'info');
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault();
+            dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (files.length === 0) { showToast('请上传图片文件', 'error'); return; }
+            uploadedFiles = files;
+            showImagePreview(uploadedFiles[0]);
+            showToast('已上传: ' + uploadedFiles[0].name, 'info');
+        });
+
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('previewBox').classList.add('show');
+                document.getElementById('imageInfo').textContent =
+                    `📷 ${file.name}  |  ${(file.size / 1024).toFixed(1)} KB  |  ${file.type}`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ---- 图片编码（带进度条） ----
+        function imageEncode() {
+            if (uploadedFiles.length === 0) { showToast('请先上传图片', 'error'); return; }
+
+            const encodeBtn = document.getElementById('encodeBtn');
+            const progressEl = document.getElementById('encodeProgress');
+            const progressBar = document.getElementById('encodeProgressBar');
+            const progressText = document.getElementById('encodeProgressText');
+
+            // 禁用按钮，显示进度条
+            encodeBtn.disabled = true;
+            progressEl.classList.add('show');
+            progressBar.style.width = '0%';
+            progressText.textContent = '准备中 0%';
+
+            const results = [];
+            let completed = 0;
+
+            uploadedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    results.push({ name: file.name, size: file.size, type: file.type, base64: e.target.result });
+                    completed++;
+
+                    // 更新进度（每个文件均分）
+                    const pct = Math.floor((completed / uploadedFiles.length) * 100);
+                    progressBar.style.width = pct + '%';
+                    progressText.textContent = `处理中 ${pct}% (${completed}/${uploadedFiles.length})`;
+
+                    if (completed === uploadedFiles.length) {
+                        // 全部完成
+                        if (results.length === 1) {
+                            imgEncodeResultData = results[0].base64;
+                            document.getElementById('imgEncodeResultText').textContent = imgEncodeResultData;
+                        } else {
+                            const obj = {};
+                            results.forEach(r => obj[r.name] = r.base64);
+                            imgEncodeResultData = JSON.stringify(obj, null, 2);
+                            document.getElementById('imgEncodeResultText').textContent = imgEncodeResultData;
+                        }
+                        document.getElementById('imgEncodeResult').classList.add('show');
+
+                        // 进度条完成
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '✅ 完成！共 ' + results.length + ' 张';
+                        showToast('✅ 编码完成！共 ' + results.length + ' 张', 'success');
+
+                        // 恢复按钮
+                        encodeBtn.disabled = false;
+                        setTimeout(() => {
+                            progressEl.classList.remove('show');
+                        }, 1500);
+                    }
+                };
+
+                reader.onerror = () => {
+                    showToast('❌ 读取文件失败: ' + file.name, 'error');
+                    encodeBtn.disabled = false;
+                    progressEl.classList.remove('show');
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function imgEncodeCopy() {
+            if (!imgEncodeResultData) { showToast('没有可复制的内容', 'error'); return; }
+            navigator.clipboard.writeText(imgEncodeResultData).then(() => showToast('✅ 已复制')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = imgEncodeResultData;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('✅ 已复制');
+            });
+        }
+
+        function imgEncodeDownload() {
+            if (!imgEncodeResultData) { showToast('没有可下载的内容', 'error'); return; }
+            const blob = new Blob([imgEncodeResultData], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'base64_result.txt';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('✅ 下载成功');
+        }
+
+        function imageEncodeClear() {
+            uploadedFiles = [];
+            imgEncodeResultData = '';
+            document.getElementById('previewBox').classList.remove('show');
+            document.getElementById('previewImage').src = '';
+            document.getElementById('imageInfo').textContent = '';
+            document.getElementById('imgEncodeResult').classList.remove('show');
+            document.getElementById('imgEncodeResultText').textContent = '';
+            document.getElementById('encodeProgress').classList.remove('show');
+            document.getElementById('encodeProgressBar').style.width = '0%';
+            document.getElementById('encodeBtn').disabled = false;
+            fileInput.value = '';
+            showToast('已清空', 'info');
+        }
+
+        // ---- 图片解码（带进度条） ----
+        function imageDecode() {
+            const input = document.getElementById('decodeInput').value.trim();
+            if (!input) {
+                showToast('请粘贴 Base64 字符串', 'error');
+                return;
+            }
+
+            const decodeBtn = document.getElementById('decodeBtn');
+            const progressEl = document.getElementById('decodeProgress');
+            const progressBar = document.getElementById('decodeProgressBar');
+            const progressText = document.getElementById('decodeProgressText');
+
+            // 禁用按钮，显示进度条
+            decodeBtn.disabled = true;
+            progressEl.classList.add('show');
+            progressBar.style.width = '0%';
+            progressText.textContent = '解析中 0%';
+
+            let data = input;
+            // 智能补全
+            if (!input.startsWith('data:image/')) {
+                if (input.startsWith('/9j/')) {
+                    data = 'data:image/jpeg;base64,' + input;
+                } else if (input.startsWith('iVBORw0KGgo')) {
+                    data = 'data:image/png;base64,' + input;
+                } else if (input.startsWith('PHN2Zy')) {
+                    data = 'data:image/svg+xml;base64,' + input;
+                } else {
+                    try {
+                        const test = input.replace(/^data:image\/\w+;base64,/, '');
+                        atob(test);
+                        data = 'data:image/png;base64,' + test;
+                    } catch (e) {
+                        showToast('❌ 无效的 Base64 格式', 'error');
+                        decodeBtn.disabled = false;
+                        progressEl.classList.remove('show');
+                        return;
+                    }
+                }
+            }
+
+            const img = document.getElementById('decodeImage');
+            const preview = document.getElementById('decodePreview');
+            const resultArea = document.getElementById('imgDecodeResult');
+            const resultText = document.getElementById('imgDecodeResultText');
+
+            // 重置图片
+            img.onload = null;
+            img.onerror = null;
+            img.src = '';
+            try { img.removeAttribute('src'); } catch (e) {}
+
+            // 模拟进度：0% → 100% 逐步增加
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.floor(Math.random() * 8) + 2;
+                if (progress >= 95) {
+                    progress = 95;
+                    clearInterval(progressInterval);
+                }
+                progressBar.style.width = progress + '%';
+                progressText.textContent = '解码中 ' + progress + '%';
+            }, 80);
+
+            setTimeout(() => {
+                // 绑定事件
+                img.onload = function() {
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    progressText.textContent = '✅ 还原成功！';
+
+                    preview.classList.add('show');
+                    document.getElementById('decodeInfo').textContent =
+                        `✅ 还原成功！ 尺寸: ${img.naturalWidth} × ${img.naturalHeight}`;
+                    resultText.textContent = `✅ 图片已还原，尺寸 ${img.naturalWidth}×${img.naturalHeight}`;
+                    resultArea.classList.add('show');
+                    showToast('✅ 图片还原成功！', 'success');
+
+                    decodeBtn.disabled = false;
+                    setTimeout(() => {
+                        progressEl.classList.remove('show');
+                    }, 1500);
+
+                    img.onload = null;
+                    img.onerror = null;
+                };
+
+                img.onerror = function() {
+                    clearInterval(progressInterval);
+                    showToast('❌ 无法解析图片数据，请检查 Base64 是否正确', 'error');
+                    decodeBtn.disabled = false;
+                    progressEl.classList.remove('show');
+                    img.onload = null;
+                    img.onerror = null;
+                };
+
+                img.src = data;
+                img.dataset.base64 = data;
+            }, 200);
+        }
+
+        function imageDecodeDownload() {
+            const img = document.getElementById('decodeImage');
+            if (!img.src || img.src === '' || img.src === 'about:blank') {
+                showToast('没有可下载的图片', 'error');
+                return;
+            }
+            if (!img.src.startsWith('data:image/')) {
+                showToast('图片数据不完整，请先解码', 'error');
+                return;
+            }
+            const match = img.src.match(/data:image\/(\w+);base64,/);
+            const ext = match ? match[1] : 'png';
+            const a = document.createElement('a');
+            a.href = img.src;
+            a.download = 'decoded_image.' + ext;
+            a.click();
+            showToast('✅ 下载成功');
+        }
+
+        function imageDecodeClear() {
+            const img = document.getElementById('decodeImage');
+            img.onload = null;
+            img.onerror = null;
+            img.src = '';
+            try { img.removeAttribute('src'); } catch (e) {}
+
+            document.getElementById('decodeInput').value = '';
+            document.getElementById('decodePreview').classList.remove('show');
+            document.getElementById('decodeInfo').textContent = '';
+            document.getElementById('imgDecodeResult').classList.remove('show');
+            document.getElementById('imgDecodeResultText').textContent = '';
+            document.getElementById('decodeProgress').classList.remove('show');
+            document.getElementById('decodeProgressBar').style.width = '0%';
+            document.getElementById('decodeBtn').disabled = false;
+            showToast('已清空', 'info');
+        }
+
+        document.getElementById('decodeInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault();
+                imageDecode(); }
+        });
+
+        // 初始化
+        window.addEventListener('load', () => {
+            document.getElementById('textInput').focus();
+        });
+    </script>
+</body>
+</html> 
